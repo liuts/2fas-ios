@@ -59,7 +59,17 @@ final class AppSecurityFlowController: FlowController {
     ) {
         let (hosting, flowController) = create(parent: parent)
         navigationController.pushRootViewController(hosting, animated: true)
-        flowController.presenter?.viewDidLoad()
+        // The initial PIN authorization overlay must not be added while the push transition is
+        // still starting: loading a second SwiftUI hosting view during the transition's
+        // coordinated layout makes the UIKit transition and the overlay's first render feed
+        // back into each other, livelocking the main thread in an endless layout loop.
+        if let coordinator = hosting.transitionCoordinator {
+            coordinator.animate(alongsideTransition: nil) { _ in
+                flowController.presenter?.viewDidLoad()
+            }
+        } else {
+            flowController.presenter?.viewDidLoad()
+        }
     }
 
     private static func create(
